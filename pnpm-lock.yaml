@@ -44,6 +44,9 @@ importers:
       hpp:
         specifier: ^0.2.3
         version: 0.2.3
+      prisma:
+        specifier: ^6.8.2
+        version: 6.11.1(typescript@5.8.3)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -108,9 +111,6 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
-      prisma:
-        specifier: ^6.8.2
-        version: 6.11.1(typescript@5.8.3)
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
