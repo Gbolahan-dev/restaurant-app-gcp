@@ -1,232 +1,146 @@
-# ────────────────────────────────────────────────────────────────
-# Cloud Build pipeline for the “quote-api”
-#   • PR trigger  → _TARGET_ENV=staging  → build image, push image
-#   • Push-main   → _TARGET_ENV=prod     → build image, push image, deploy Cloud Run, deploy GKE
-# ────────────────────────────────────────────────────────────────
+# cloudbuild.yaml ─ revised
+
 steps:
-  # 1) Build Docker Image
-  - id: build-image
-    name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '--tag=us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:${SHORT_SHA}'
-      - '--tag=us-central1-docker.pkg.dev/$PROJECT_ID/restaurant-app/restaurant-app:latest'
-      - '.' # Assumes Dockerfile is in the root
+# ───────────────────────────── 1) BUILD & PUSH IMAGE ───────────────────────────
+- id: build-image
+  name: gcr.io/cloud-builders/docker
+  args:
+    - build
+    - '--tag=us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:${SHORT_SHA}'
+    - '--tag=us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:latest'
+    - '.'
 
-  # 2) Push SHORT_SHA tagged image to Artifact Registry
-  - id: push-sha-image
-    name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:${SHORT_SHA}']
-    waitFor: ['build-image']
+- id: push-sha-image
+  name: gcr.io/cloud-builders/docker
+  args: ['push','us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:${SHORT_SHA}']
+  waitFor: ['build-image']
 
-  # 3) Push 'latest' tagged image to Artifact Registry
-  - id: push-latest-image
-    name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/restaurant-app/restaurant-app:latest']
-    waitFor: ['build-image']
+- id: push-latest-image
+  name: gcr.io/cloud-builders/docker
+  args: ['push','us-central1-docker.pkg.dev/${PROJECT_ID}/restaurant-app/restaurant-app:latest']
+  waitFor: ['build-image']
 
-  # 4) Deploy to Cloud Run (ONLY for prod)
-  - id: deploy-to-cloud-run
-    name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        if [[ "$_TARGET_ENV" == "prod" ]]; then
-          echo "🔄 Deploying to Cloud Run (prod)…"
-          gcloud run deploy quote-api \
-            --image=us-central1-docker.pkg.dev/$PROJECT_ID/restaurant-app/restaurant-app:latest \
-            --revision-suffix=sha-${SHORT_SHA} \
-            --region=us-central1 \
-            --platform=managed \
-            --allow-unauthenticated \
-            --project=${PROJECT_ID} 
-            # --traffictag=latest
-        else
-          echo "Skipping Cloud Run deployment – _TARGET_ENV=${_TARGET_ENV}"
-        fi
-    waitFor: ['push-latest-image']
+# ───────────────────── 2) DEPLOY TO CLOUD RUN (only _prod_) ────────────────────
+#- id: deploy-to-cloud-run
+#  name: gcr.io/cloud-builders/gcloud
+#  entrypoint: bash
+#  args:
+#    - -c
+#    - |
+#      if [[ "$_TARGET_ENV" == "prod" ]]; then
+#        echo "🔄 Deploying to Cloud Run (prod)…"
+#        gcloud run deploy restaurant-app \
+#          --image=us-central1-docker.pkg.dev/$PROJECT_ID/restaurant-app/restaurant-app:latest \
+#          --revision-suffix=sha-${SHORT_SHA} \
+#          --region=us-central1 \
+#          --platform=managed \
+#          --allow-unauthenticated \
+#          --project=${PROJECT_ID}
+#      else
+#        echo "Skipping Cloud Run deployment – _TARGET_ENV=${_TARGET_ENV}"
+#      fi
+#  waitFor: ['push-latest-image']
 
-  # 5) Optional Canary Split for Cloud Run (ONLY for prod)
-  - id: canary-split-cloud-run
-    name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        if [[ "$_TARGET_ENV" == "prod" ]]; then
-          echo "🔍 Fetching latest two revisions for Cloud Run canary split..."
-          _cb_revision_list_output=$$(gcloud run revisions list \
-            --service=quote-api \
-            --region=us-central1 \
-            --platform=managed \
-            --sort-by="~metadata.creationTimestamp" \
-            --limit=2 \
-            --format="value(metadata.name)" \
-            --project=${PROJECT_ID})
+# ─────────────── 3) OPTIONAL 10 % CANARY SPLIT (only _prod_) ───────────────────
+#- id: canary-split-cloud-run
+#  name: gcr.io/cloud-builders/gcloud
+#  entrypoint: bash
+#  args:
+#    - -c
+#    - |
+#      if [[ "$_TARGET_ENV" == "prod" ]]; then
+#        echo "🔍 Fetching revisions for canary split…"
+#        revs=$(gcloud run revisions list \
+#                 --service=restaurant-app \
+#                 --region=us-central1 \
+#                 --platform=managed \
+#                 --sort-by="~metadata.creationTimestamp" \
+#                 --limit=2 \
+#                 --format="value(metadata.name)" \
+#                 --project=${PROJECT_ID}) || exit 0
+#        readarray -t arr <<< "$revs"
+#        new="${arr[0]}"
+#        prev="${arr[1]:-}"
+#        [[ -z "$new" ]] && { echo "No revision found – skipping"; exit 0; }
+#       if [[ -n "$prev" ]]; then
+#          echo "🪄 10 % → $new, 90 % → $prev"
+#          gcloud run services update-traffic restaurant-app \
+#            --region=us-central1 --platform=managed \
+#            --to-revisions="$new=10,$prev=90" \
+#            --project=${PROJECT_ID}
+#        else
+#          echo "Single revision – 100 % traffic on $new"
+#        fi
+#      else
+#        echo "Skipping canary – _TARGET_ENV=${_TARGET_ENV}"
+#      fi
+#  waitFor: ['deploy-to-cloud-run']
 
-          if [[ -z "$$_cb_revision_list_output" ]]; then
-            echo "❌ ERROR: Failed to fetch Cloud Run revision list or list is empty. Skipping canary."
-            exit 0 # Exit gracefully
-          fi
+# ─────────────────────────── 4) OPTIONAL DEBUG STEP ────────────────────────────
+- id: debug-file-listing
+  name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      echo "--- $(pwd) ---"; ls -la
+      echo "--- ./charts ---"; ls -la ./charts || true
+      echo "--- ./charts/restaurant-app ---"; ls -la ./charts/restaurant-app || true
+  waitFor: ['push-sha-image']
 
-          mapfile -t _cb_rev_array <<< "$$_cb_revision_list_output"
-          _cb_new_revision="$${_cb_rev_array[0]}"
-          _cb_previous_stable_revision=""
+# ──────────────── 5) TERRAFORM – DEPLOY STAGING GKE (prod only) ───────────────
+- name: hashicorp/terraform:1.5.7
+  id: Terraform Deploy Staging GKE
+  dir: infra
+  entrypoint: sh
+  args:
+    - -c
+    - |
+      if [[ "$_TARGET_ENV" == "prod" ]]; then
+        echo "▶️  Terraform: helm_release.staging (${SHORT_SHA})"
+        terraform init
+        terraform apply -auto-approve \
+          -var="image_tag=${SHORT_SHA}" \
+          -target=helm_release.staging
+      else
+        echo "Skipping staging deploy – _TARGET_ENV=${_TARGET_ENV}"
+      fi
+  waitFor: ['push-sha-image','debug-file-listing']
 
-          if [[ $${#_cb_rev_array[@]} -gt 1 ]]; then
-            _cb_previous_stable_revision="$${_cb_rev_array[1]}"
-          fi
+# ─────────────── 6) MANUAL APPROVAL GATE (prod only) ──────────────────────────
+- name: gcr.io/cloud-builders/gcloud
+  id: Hold for Production Approval
+  entrypoint: bash
+  args:
+    - -c
+    - |
+      if [[ "$_TARGET_ENV" == "prod" ]]; then
+        echo "WAITING FOR MANUAL APPROVAL"
+      else
+        echo "Approval step not needed"
+      fi
+  waitFor: ['Terraform Deploy Staging GKE']
 
-          if [[ -z "$$_cb_new_revision" ]]; then
-            echo "❌ ERROR: Could not determine new Cloud Run revision name. Skipping canary."
-            exit 0 # Exit gracefully
-          fi
+# ──────────────── 7) TERRAFORM – DEPLOY PROD GKE (prod only) ──────────────────
+- name: hashicorp/terraform:1.5.7
+  id: Terraform Deploy Production GKE
+  dir: infra
+  entrypoint: sh
+  args:
+    - -c
+    - |
+      if [[ "$_TARGET_ENV" == "prod" ]]; then
+        echo "▶️  Terraform: helm_release.production (${SHORT_SHA})"
+        terraform init
+        terraform apply -auto-approve \
+          -var="image_tag=${SHORT_SHA}" \
+          -target=helm_release.production
+      else
+        echo "Skipping prod deploy – _TARGET_ENV=${_TARGET_ENV}"
+      fi
+  waitFor: ['Hold for Production Approval']
 
-          echo "🆕 New Cloud Run Revision: $$_cb_new_revision"
-          if [[ -n "$$_cb_previous_stable_revision" ]]; then
-            echo "🕰️ Previous Stable Cloud Run Revision: $$_cb_previous_stable_revision"
-            echo "🪄 Applying 10% canary to $$_cb_new_revision, 90% to $$_cb_previous_stable_revision for Cloud Run"
-            gcloud run services update-traffic quote-api \
-              --region=us-central1 \
-              --platform=managed \
-              --to-revisions="$$_cb_new_revision=10,$$_cb_previous_stable_revision=90" \
-              --project=${PROJECT_ID}
-          else
-            echo "✅ Only one Cloud Run revision exists ($$_cb_new_revision). All traffic (100%) automatically goes to it."
-          fi
-        else
-          echo "Skipping Cloud Run canary split – _TARGET_ENV=${_TARGET_ENV}"
-        fi
-    waitFor: ['deploy-to-cloud-run']
-
-  # 6) Debug File Listing (Optional)
-  - id: debug-file-listing
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        echo "--- Current working directory: $(pwd) ---"
-        ls -la
-        echo "--- Listing ./charts directory (if it exists): ---"
-        ls -la ./charts || true
-        echo "--- Listing ./charts/quote-api directory (if it exists): ---"
-        ls -la ./charts/quote-api || true
-    waitFor: ['push-sha-image']
-
-# 7) Deploy to GKE with Helm (CONDITIONAL for prod AND staging)
-#
-#  - id: deploy-to-gke-with-helm
-#    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-#    entrypoint: 'bash'
-#    args:
-#      - '-c'
-#      - |
-#         set -e
-#         set -x
-#         if [[ "$_TARGET_ENV" == "prod" ]] || [[ "$_TARGET_ENV" == "staging" ]]; then
-#            echo "Preparing to deploy to GKE for environment: $_TARGET_ENV"
-#
-#            TARGET_NAMESPACE="$_TARGET_ENV"
-#            if [[ "$_TARGET_ENV" == "prod" ]]; then
-#               TARGET_NAMESPACE="quote-api"
-#            fi
-#            echo "Target GKE Namespace: $$TARGET_NAMESPACE"
-#
-#            echo "Updating package list and installing kubectl and gke-gcloud-auth-plugin..."
-#            apt-get update -y
-#            apt-get install -y kubectl google-cloud-sdk-gke-gcloud-auth-plugin
-#
-#            echo "Installing Helm client..."
-#            HELM_VERSION="v3.12.0"
-#            curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-#            chmod 700 get_helm.sh
-#            ./get_helm.sh --version $$HELM_VERSION
-#
-#            echo "Configuring kubectl for GKE cluster..."
-#            # !!! REPLACE THESE WITH YOUR ACTUAL CLUSTER NAME AND ZONE !!!
-#            gcloud container clusters get-credentials quote-api-cluster-2 \
-#              --zone us-central1-a \
-#              --project=${PROJECT_ID}
-#
-#            echo "Running helm upgrade for GKE Namespace: $$TARGET_NAMESPACE ..."
-#            helm upgrade --install quote-api-$${TARGET_NAMESPACE} ./charts/quote-api \
-#               --namespace $$TARGET_NAMESPACE \
-#               --create-namespace \
-#               --set image.repository=us-central1-docker.pkg.dev/$PROJECT_ID/quote-api/quote-api \
-#               --set image.tag=$SHORT_SHA \
-#               --set image.pullPolicy=Always \
-#               --timeout 5m
-#
-#           echo "Helm deployment to GKE (environment: $_TARGET_ENV, namespace: $$TARGET_NAMESPACE) completed."
-#         else
-#           echo "Skipping GKE Helm deployment - _TARGET_ENV=${_TARGET_ENV} is not prod or staging"
-#         fi
-#    waitFor: ['debug-file-listing', 'push-sha-image'] # Ensure image is pushed
-
-  # NEW STEP: Deploys ONLY staging GKE using Terraform
-  - name: 'hashicorp/terraform:1.5.7'
-    id: 'Terraform Deploy Staging GKE'
-    dir: 'infra' # Important: run Terraform from the infra directory
-    entrypoint: 'sh'
-    args:
-      - '-c'
-      - |
-        # This GKE promotion flow is part of what happens when _TARGET_ENV is 'prod'
-        # (i.e., when you merge to the main branch and the prod trigger runs)
-        if [[ "$_TARGET_ENV" == "prod" ]]; then
-          echo ">>> Terraform: Applying STAGING release (helm_release.quote_api_staging_2) with image ${SHORT_SHA}..."
-          terraform init
-          terraform apply -auto-approve -var="image_tag=${SHORT_SHA}" -target=helm_release.quote_api_staging_2
-          echo ">>> Terraform apply for STAGING GKE complete."
-        else
-          echo "Skipping STAGING GKE Terraform deployment for _TARGET_ENV=${_TARGET_ENV}"
-        fi
-    # Wait for the image to be pushed before trying to deploy it.
-    # Also, wait for debug-file-listing if you kept that step.
-    waitFor: ['push-sha-image', 'debug-file-listing']
-
-  # NEW STEP: Pauses the pipeline for manual approval
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Hold for Production Approval'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        if [[ "$_TARGET_ENV" == "prod" ]]; then
-          echo "WAITING FOR MANUAL APPROVAL"
-          echo "Staging GKE has been updated with image ${SHORT_SHA}."
-          echo "Please verify the staging environment and then approve this build in the Cloud Build UI to deploy to production."
-        else
-          echo "Approval step not applicable for _TARGET_ENV=${_TARGET_ENV}"
-        fi
-    waitFor: ['Terraform Deploy Staging GKE']
-
-  # NEW STEP: Deploys ONLY production GKE using Terraform
-  - name: 'hashicorp/terraform:1.5.7'
-    id: 'Terraform Deploy Production GKE'
-    dir: 'infra' # Important: run Terraform from the infra directory
-    entrypoint: 'sh'
-    args:
-      - '-c'
-      - |
-        if [[ "$_TARGET_ENV" == "prod" ]]; then
-          echo ">>> Terraform: Applying PRODUCTION release (helm_release.quote_api_prod) with image ${SHORT_SHA}..."
-          terraform init
-          terraform apply -auto-approve -var="image_tag=${SHORT_SHA}" -target=helm_release.quote_api_prod
-          echo ">>> Terraform apply for PRODUCTION GKE complete."
-        else
-          echo "Skipping PRODUCTION GKE Terraform deployment for _TARGET_ENV=${_TARGET_ENV}"
-        fi
-    waitFor: ['Hold for Production Approval']
-
-# Global options for all build steps
+# ───────────────────────────── OPTIONS / SUBSTITUTIONS ────────────────────────
 options:
-  logging: CLOUD_LOGGING_ONLY
-
-# Substitutions that might be passed by your triggers
-# _TARGET_ENV should be set by your trigger configuration
-# (e.g., _TARGET_ENV=prod for main branch, _TARGET_ENV=staging for PRs)
-# PROJECT_ID and SHORT_SHA are automatically provided by Cloud Build.
+  logging: CLOUD_LOGGING_ONLY   # keep build logs in Cloud Logging
 
