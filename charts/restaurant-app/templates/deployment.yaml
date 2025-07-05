@@ -29,7 +29,7 @@ spec:
               protocol: TCP
           envFrom:
             - secretRef:
-                name: db-credentials # The name of the K8s secret from secrets.tf
+                name: restaurant-db-secret # The name of the K8s secret from secrets.tf
           livenessProbe:
             httpGet:
               path: /
