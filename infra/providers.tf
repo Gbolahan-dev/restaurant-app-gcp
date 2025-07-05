@@ -1,15 +1,14 @@
-
 terraform {
   required_version = ">= 1.3.0"
 
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 6.0"          # ← was ~> 5.0
+      version = "~> 5.0"          #  ← 5.x, NOT 6.x
     }
-    google-beta = {               # ← add this block (matches google)
+    google-beta = {               #  must match google
       source  = "hashicorp/google-beta"
-      version = "~> 6.0"
+      version = "~> 5.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -25,6 +24,7 @@ terraform {
     }
   }
 }
+
 provider "google" {
   project = var.project_id
   region  = var.region
