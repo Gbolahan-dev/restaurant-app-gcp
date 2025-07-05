@@ -1,7 +1,7 @@
+# infra/vpc.tf
 module "vpc" {
-  # OLD:  source  = "terraform-google-modules/network/google"
-  source = "./modules/network"          # ← new local path
-  # delete any  version = "…"  line
+  source  = "terraform-google-modules/network/google"
+  version = "~> 7.0"                     # keep the tried-and-true version
 
   project_id   = var.project_id
   network_name = "restaurant-app-vpc"
