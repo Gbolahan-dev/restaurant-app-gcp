@@ -1,7 +1,6 @@
-# infra/vpc.tf
 module "vpc" {
   source  = "terraform-google-modules/network/google"
-  version = "~> 7.0"                     # keep the tried-and-true version
+  version = "~> 7.0"
 
   project_id   = var.project_id
   network_name = "restaurant-app-vpc"
@@ -12,5 +11,14 @@ module "vpc" {
     subnet_ip     = "10.10.10.0/24"
     subnet_region = var.region
   }]
+
+  # NEW – tell the module’s resources to ignore Pod/Service ranges
+  subnets_extra_tags = {
+    gke-subnet = {
+      lifecycle = {
+        ignore_changes = ["secondary_ip_range"]
+      }
+    }
+  }
 }
 
