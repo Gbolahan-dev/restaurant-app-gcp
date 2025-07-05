@@ -1,0 +1,14 @@
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: {{ include "restaurant-app.fullname" . }}-monitor
+  labels:
+    {{- include "restaurant-app.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "restaurant-app.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
