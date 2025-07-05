@@ -33,6 +33,8 @@ COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 # Copy the prisma schema, which is needed for running migrations
 COPY --from=builder /usr/src/app/prisma ./prisma
+# ADD THIS LINE in the 'production' stage
+COPY --from=builder /usr/src/app/generated ./generated
 # Copy package.json to know which prod dependencies to keep
 COPY package.json .
 # Prune development dependencies
