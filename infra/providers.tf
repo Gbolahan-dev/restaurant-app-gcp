@@ -1,10 +1,15 @@
-/*
+
 terraform {
   required_version = ">= 1.3.0"
+
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 5.0"
+      version = "~> 6.0"          # ← was ~> 5.0
+    }
+    google-beta = {               # ← add this block (matches google)
+      source  = "hashicorp/google-beta"
+      version = "~> 6.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -37,4 +42,4 @@ provider "helm" {
     cluster_ca_certificate = base64decode(google_container_cluster.main.master_auth[0].cluster_ca_certificate)
   }
 }
-*/
+

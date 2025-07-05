@@ -1,5 +1,5 @@
 # helm.tf
-/*resource "helm_release" "staging" {
+resource "helm_release" "staging" {
   name             = "restaurant-app-staging"
   chart            = "../charts/restaurant-app" # Path to new chart
   namespace        = kubernetes_namespace.staging.metadata[0].name
@@ -38,4 +38,4 @@ resource "helm_release" "production" {
     value = "restaurant-app-ksa"
   }
 }
-*/
+

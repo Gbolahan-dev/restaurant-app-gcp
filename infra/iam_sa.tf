@@ -10,7 +10,7 @@ resource "google_project_iam_member" "app_gsa_permissions" {
   member   = "serviceAccount:${google_service_account.app_gsa.email}"
 }
 
-/*
+
 # Workload Identity Bindings
 resource "google_service_account_iam_member" "app_gsa_wi_user_staging" {
   service_account_id = google_service_account.app_gsa.name
@@ -22,7 +22,7 @@ resource "google_service_account_iam_member" "app_gsa_wi_user_prod" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.prod.metadata[0].name}/restaurant-app-ksa]"
 }
-*/
+
 
 # Cloud Build Service Account
 resource "google_service_account" "cloudbuild_sa" {

@@ -29,6 +29,7 @@ resource "google_sql_database_instance" "main_db" {
   database_version    = "POSTGRES_14"
   region              = var.region
   deletion_protection = false
+  
 
   settings {
     tier = "db-g1-small"
@@ -36,6 +37,7 @@ resource "google_sql_database_instance" "main_db" {
       ipv4_enabled    = false # No public IP
       private_network = module.vpc.network_self_link
     }
+    disk_size = 20
   }
 
   depends_on = [google_service_networking_connection.private_vpc_connection]

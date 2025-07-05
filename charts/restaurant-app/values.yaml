@@ -1,6 +1,12 @@
 replicaCount: 1
 
-serviceAccountName: restaurant-app-ksa
+# --- ServiceAccount --------------------------
+serviceAccount:
+  # Do **not** create a ServiceAccount from the chart; Terraform already
+  # created `restaurant-app-ksa` and Helm merely needs to reference it.
+  create: true
+  name: restaurant-app-ksa
+# ---------------------------------------------
 
 # image values are set by Terraform
 image:
@@ -12,7 +18,6 @@ service:
   type: LoadBalancer
   port: 3000
 
-# We're not using Ingress for this project
 ingress:
   enabled: false
 
@@ -29,3 +34,4 @@ resources:
   limits:
     cpu: 500m
     memory: 512Mi
+
