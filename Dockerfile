@@ -3,31 +3,36 @@ FROM node:20-alpine AS base
 RUN npm install -g pnpm
 WORKDIR /usr/src/app
 
-# ---- Builder Stage ----
-# Builds a complete, working version of the application
-FROM base AS builder
+# ---- Dependencies Stage ----
+# Install ALL dependencies, including dev dependencies, needed for the build.
+FROM base AS deps
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile
 
+# ---- Builder Stage ----
+# Build the application using the full dependencies.
+FROM base AS builder
+COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
 RUN pnpm prisma generate
 RUN pnpm build
 
-
 # ---- Production Stage ----
-FROM node:20-alpine AS production
-WORKDIR /usr/src/app
+# Create the final, small image.
+FROM base AS production
 ENV NODE_ENV=production
 
-# Copy package manifests for a clean production install
+# Copy package manifests for a clean production install.
 COPY package.json pnpm-lock.yaml* ./
+
+# Install ONLY production dependencies. This is reliable.
 RUN pnpm install --prod --frozen-lockfile
 
-# Copy the pre-built application and other assets from the builder stage
+# Copy the pre-built application and other required assets from the builder stage.
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
-# THIS IS THE CORRECTED LINE:
+# THIS IS THE ONE-LINE FIX. The destination is ./generated, NOT ./dist/generated
 COPY --from=builder /usr/src/app/generated ./generated
 
-# Set the command to run the application
+# This command runs the application.
 CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
