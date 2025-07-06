@@ -27,19 +27,17 @@ RUN pnpm build
 # This is the final, small, secure image that will be deployed.
 FROM base AS production
 ENV NODE_ENV=production
-# Copy only the production dependencies from the 'deps' stage
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-# Copy the compiled application code from the 'builder' stage
+
+# Copy the package manifests
+COPY package.json pnpm-lock.yaml* ./
+
+# Install ONLY production dependencies. This is more reliable than pruning.
+RUN pnpm install --prod --frozen-lockfile
+
+# Copy the pre-built application and other assets from the builder stage
 COPY --from=builder /usr/src/app/dist ./dist
-# Copy the prisma schema, which is needed for running migrations
 COPY --from=builder /usr/src/app/prisma ./prisma
-# ADD THIS LINE in the 'production' stage
 COPY --from=builder /usr/src/app/generated ./generated
-# Copy package.json to know which prod dependencies to keep
-COPY package.json .
-# Prune development dependencies
-RUN pnpm prune --prod
 
 # This is the command that will be run when the container starts.
-# It first applies any pending database migrations, then starts the app.
 CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
