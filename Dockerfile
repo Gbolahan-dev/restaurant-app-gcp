@@ -33,7 +33,7 @@ COPY package.json pnpm-lock.yaml* ./
 
 # Install ONLY production dependencies. This is more reliable than pruning.
 RUN pnpm install --prod --frozen-lockfile
-
+pnpm add express          # or: npm i express --save
 # Copy the pre-built application and other assets from the builder stage
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
