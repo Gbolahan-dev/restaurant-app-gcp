@@ -25,4 +25,10 @@ output "gke_cluster_ca_certificate" {
   value = google_container_cluster.main.master_auth[0].cluster_ca_certificate
 }
 
+# Add this new block to the end of infra/outputs.tf
 
+output "debug_database_url_from_secret_manager" {
+  description = "DEBUG: This forces Terraform to read the secret and will fail if permissions are wrong."
+  value       = data.google_secret_manager_secret_version.db_url.secret_data
+  sensitive   = true # This prevents the actual password from printing in the public logs
+}
