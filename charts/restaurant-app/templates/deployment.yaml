@@ -30,17 +30,5 @@ spec:
           envFrom:
             - secretRef:
                 name: restaurant-db-secret # The name of the K8s secret from secrets.tf
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
