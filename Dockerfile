@@ -38,7 +38,8 @@ COPY --from=builder /usr/src/app/generated ./dist/generated
 COPY package.json pnpm-lock.yaml ./
 
 # Install production dependencies
-RUN pnpm install --prod --frozen-lockfile
+# Install ONLY production dependencies (allow lockfile drift in CI)
+RUN pnpm install --prod --no-frozen-lockfile
 
 # Entrypoint
 CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
