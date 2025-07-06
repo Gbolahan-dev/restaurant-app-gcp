@@ -24,21 +24,17 @@ RUN pnpm prisma generate
 RUN pnpm build
 
 # ---- Production Stage ----
-# This is the final, small, secure image that will be deployed.
 FROM base AS production
 ENV NODE_ENV=production
+WORKDIR /usr/src/app
 
-# Copy the package manifests
-COPY package.json pnpm-lock.yaml* ./
-
-# Install ONLY production dependencies. This is more reliable than pruning.
-RUN pnpm install --prod --frozen-lockfile\
-&& pnpm add express
-
-# Copy the pre-built application and other assets from the builder stage
+# Copy the necessary files from previous stages
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
-COPY --from=builder /usr/src/app/generated ./generated
+COPY package.json pnpm-lock.yaml ./
+
+# Install ONLY production dependencies
+RUN pnpm install --prod --frozen-lockfile
 
 # This is the command that will be run when the container starts.
 CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
