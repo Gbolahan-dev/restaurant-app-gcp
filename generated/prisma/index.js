@@ -134,7 +134,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/aythejuggernaut/Downloads/projects/inudining-backend/generated/prisma",
+      "value": "/home/gb/restaurant-app-gcp/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -148,12 +148,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/aythejuggernaut/Downloads/projects/inudining-backend/prisma/schema.prisma",
+    "sourceFilePath": "/home/gb/restaurant-app-gcp/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.8.2",
@@ -162,6 +161,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": true,
   "inlineDatasources": {
     "db": {
       "url": {

@@ -24,17 +24,22 @@ RUN pnpm prisma generate
 RUN pnpm build
 
 # ---- Production Stage ----
-FROM base AS production
-ENV NODE_ENV=production
+FROM node:20-alpine AS production
+RUN npm install -g pnpm
 WORKDIR /usr/src/app
+ENV NODE_ENV=production
 
-# Copy the necessary files from previous stages
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/prisma ./prisma
+# Copy build outputs
+COPY --from=builder /usr/src/app/dist     ./dist
+COPY --from=builder /usr/src/app/prisma   ./prisma
+COPY --from=builder /usr/src/app/generated ./dist/generated
+
+# Copy manifests for installing deps
 COPY package.json pnpm-lock.yaml ./
 
-# Install ONLY production dependencies
+# Install production dependencies
 RUN pnpm install --prod --frozen-lockfile
 
-# This is the command that will be run when the container starts.
+# Entrypoint
 CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
+
