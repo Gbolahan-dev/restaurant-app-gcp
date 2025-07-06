@@ -35,4 +35,4 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/generated ./generated
 
 # This command runs the application.
-CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/main"]
+CMD ["tail", "-f", "/dev/null"]
