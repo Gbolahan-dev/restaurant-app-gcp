@@ -1,12 +1,13 @@
+# infra/vpc.tf
+
 module "vpc" {
   source  = "terraform-google-modules/network/google"
-  version = "~> 7.0"
+  version = "~> 8.0"
 
   project_id   = var.project_id
   network_name = "restaurant-app-vpc"
   routing_mode = "GLOBAL"
 
-  # main subnet (unchanged)
   subnets = [
     {
       subnet_name   = "gke-subnet"
@@ -15,14 +16,20 @@ module "vpc" {
     }
   ]
 
-  # ⬇️  tell the module which *existing* secondary range belongs to that subnet
+  # This section creates the secondary ranges that the GKE cluster needs.
+  # The names here MUST match the names used in cluster.tf
   secondary_ranges = {
     gke-subnet = [
       {
-        range_name    = "gke-quote-api-cluster-pods-c024ec0d"
-        ip_cidr_range = "10.176.0.0/14"
+        # This is the range for the Pods
+        range_name    = "gke-pods-range"
+        ip_cidr_range = "10.20.0.0/16" # A suitable range for pods
+      },
+      {
+        # This is the range for the Services
+        range_name    = "gke-services-range"
+        ip_cidr_range = "10.30.0.0/20" # A suitable range for services
       }
     ]
   }
 }
-

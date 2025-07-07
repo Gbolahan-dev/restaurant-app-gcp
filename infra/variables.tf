@@ -11,11 +11,6 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "cluster_name" {
-  description = "Name of the GKE cluster"
-  type        = string
-  default     = "restaurant-app-cluster"
-}
 
 # This variable is required by cloudbuild_triggers.tf
 variable "github_owner" {
@@ -36,4 +31,16 @@ variable "image_tag" {
   description = "The Docker image tag to deploy."
   type        = string
   default     = "latest"
+}
+
+ variable "cluster_name" {
+   description = "Name of the GKE cluster"
+   type        = string
+  default     = "quote-api-cluster"      # ← match the actual name
+ }
+
+variable "zone" {
+  description = "GKE cluster zone"
+  type        = string
+  default     = "us-central1-a"           # ← where you ran `gcloud container clusters create`
 }

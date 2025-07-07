@@ -1,3 +1,4 @@
+
 # infra/k8s-secrets.tf
 
 # 1. Look up the Neon DB URL from the secure Secret Manager
@@ -14,6 +15,7 @@ resource "kubernetes_secret" "db_secret_staging" {
   data = {
     DATABASE_URL = data.google_secret_manager_secret_version.db_url.secret_data
   }
+  depends_on = [kubernetes_namespace.staging]
 }
 
 # 3. Create a Kubernetes secret in the production namespace
@@ -25,4 +27,6 @@ resource "kubernetes_secret" "db_secret_prod" {
   data = {
     DATABASE_URL = data.google_secret_manager_secret_version.db_url.secret_data
   }
+  depends_on = [kubernetes_namespace.prod]
 }
+

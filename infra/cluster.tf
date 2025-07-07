@@ -1,43 +1,41 @@
+# infra/cluster.tf
+
 resource "google_container_cluster" "main" {
   project                  = var.project_id
   name                     = var.cluster_name
-  location                 = "us-central1-a" # Using region for a regional cluster
+  location                 = var.zone # This makes it a regional cluster
   remove_default_node_pool = true
   initial_node_count       = 1
-  network                  = module.vpc.network_name
-  subnetwork               = module.vpc.subnets_names[0]
 
+  network    = module.vpc.network_name
+  subnetwork = module.vpc.subnets_names[0]
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "gke-pods-range"
+    services_secondary_range_name = "gke-services-range"
+  }
+  
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
-  }
-  monitoring_config {
-    managed_prometheus {
-      enabled = true
-    }
   }
 }
 
 resource "google_container_node_pool" "main_pool" {
   name     = "main-pool"
-  cluster  = google_container_cluster.main.name
-  location = "us-central1-a"
   project  = var.project_id
+  # For a regional cluster, the node pool location must be a zone within that region.
+  # We will hardcode it here to match your previous setup.
+  location = "us-central1-a" 
+  cluster  = google_container_cluster.main.name
 
   autoscaling {
     min_node_count = 1
     max_node_count = 3
   }
-  management {
-    auto_repair  = true
-    auto_upgrade = true
-  }
+  
   node_config {
     machine_type    = "e2-medium"
-    service_account = google_service_account.gke_node_sa.email
-    image_type      = "COS_CONTAINERD"
     disk_size_gb    = 20
-    workload_metadata_config {
-      mode = "GKE_METADATA"
-    }
+    service_account = google_service_account.gke_node_sa.email
   }
 }

@@ -1,9 +1,11 @@
+
 # helm.tf
 resource "helm_release" "staging" {
   name             = "restaurant-app-staging"
   chart            = "../charts/restaurant-app" # Path to new chart
   namespace        = kubernetes_namespace.staging.metadata[0].name
   create_namespace = false
+  depends_on = [kubernetes_secret.db_secret_staging]  
 
   set {
     name  = "image.repository"
@@ -24,6 +26,7 @@ resource "helm_release" "production" {
   chart            = "../charts/restaurant-app" # Path to new chart
   namespace        = kubernetes_namespace.prod.metadata[0].name
   create_namespace = false
+  depends_on = [kubernetes_secret.db_secret_prod]
 
   set {
     name  = "image.repository"
