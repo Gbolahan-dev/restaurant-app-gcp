@@ -17,6 +17,7 @@ FROM base AS builder
 COPY . .
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=deps /usr/src/app/prisma ./prisma
+COPY --from=deps /usr/src/app/generated ./generated
 RUN pnpm build
 
 # ---- Production Stage ----
@@ -26,7 +27,7 @@ ENV NODE_ENV=production
 
 # Copy the built application from the builder stage.
 COPY --from=builder /usr/src/app/dist ./dist
-
+COPY --from=builder /usr/src/app/generated ./generated
 # Copy the prisma schema and the production node_modules.
 # Critically, this includes the generated Prisma client.
 COPY --from=builder /usr/src/app/prisma ./prisma
