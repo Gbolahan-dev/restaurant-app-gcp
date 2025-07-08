@@ -38,7 +38,7 @@ resource "google_project_iam_member" "cb_sa_permissions" {
   for_each = toset([
     "roles/artifactregistry.writer", "roles/container.developer", "roles/logging.logWriter",
     "roles/iam.serviceAccountUser", "roles/container.clusterViewer", "roles/compute.viewer",
-    "roles/iam.serviceAccountViewer", "roles/cloudsql.admin"
+    "roles/iam.serviceAccountViewer", "roles/cloudsql.admin", "roles/secretmanager.secretAccessor"
   ])
   project = var.project_id
   role    = each.key
