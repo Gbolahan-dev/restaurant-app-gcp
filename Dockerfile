@@ -4,17 +4,19 @@ RUN npm install -g pnpm
 WORKDIR /usr/src/app
 
 # ---- Dependencies Stage ----
-# Install ALL dependencies, including dev dependencies, needed for the build.
+# First, install dependencies and generate the Prisma Client.
 FROM base AS deps
-COPY package.json pnpm-lock.yaml* ./
+COPY prisma ./prisma/
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+RUN pnpm prisma generate
 
 # ---- Builder Stage ----
-# Build the application using the full dependencies.
+# Use the dependencies from the previous stage to build the app.
 FROM base AS builder
-COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY . .
-RUN pnpm prisma generate
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY --from=deps /usr/src/app/prisma ./prisma
 RUN pnpm build
 
 # ---- Production Stage ----
@@ -22,17 +24,14 @@ RUN pnpm build
 FROM base AS production
 ENV NODE_ENV=production
 
-# Copy package manifests for a clean production install.
-COPY package.json pnpm-lock.yaml* ./
-
-# Install ONLY production dependencies. This is reliable.
-RUN pnpm install --prod --frozen-lockfile
-
-# Copy the pre-built application and other required assets from the builder stage.
+# Copy the built application from the builder stage.
 COPY --from=builder /usr/src/app/dist ./dist
+
+# Copy the prisma schema and the production node_modules.
+# Critically, this includes the generated Prisma client.
 COPY --from=builder /usr/src/app/prisma ./prisma
-# THIS IS THE ONE-LINE FIX. The destination is ./generated, NOT ./dist/generated
-COPY --from=builder /usr/src/app/generated ./generated
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+
 
 # This command runs the application.
-CMD ["tail", "-f", "/dev/null"]
+CMD ["node", "dist/main.js"]

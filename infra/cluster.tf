@@ -37,5 +37,7 @@ resource "google_container_node_pool" "main_pool" {
     machine_type    = "e2-medium"
     disk_size_gb    = 20
     service_account = google_service_account.gke_node_sa.email
+
+    tags = ["gke-node"]
   }
 }

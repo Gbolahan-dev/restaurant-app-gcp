@@ -1,17 +1,15 @@
-# infra/firewall.tf
-
-resource "google_compute_firewall" "allow_gke_nodeports" {
+resource "google_compute_firewall" "allow_gke_lb_3000" {
   project = var.project_id
-  name    = "allow-gke-nodeports"
-  network = module.vpc.network_name # Use the network created by our VPC module
+  name    = "allow-gke-lb-3000"
+  network = module.vpc.network_name
 
-  # Allow traffic from anywhere on the internet
   source_ranges = ["0.0.0.0/0"]
 
-  # This rule allows traffic on the high-numbered ports that GKE uses
-  # for LoadBalancer services (NodePorts).
+  target_tags = ["gke-node"] # Make sure this matches your node pool tags
+
   allow {
     protocol = "tcp"
-    ports    = ["30000-32767"]
+    ports    = ["3000"]
   }
 }
+

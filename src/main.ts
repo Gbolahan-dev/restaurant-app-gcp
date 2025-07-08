@@ -42,6 +42,7 @@ async function bootstrap() {
 
   app.useLogger(app.get(MyLoggerService));
 
-  await app.listen(process.env.PORT ?? 4000);
+  // Listen on port 3000 to match the Kubernetes Service and Deployment configuration
+  await app.listen(3000, '0.0.0.0');
 }
 bootstrap();
