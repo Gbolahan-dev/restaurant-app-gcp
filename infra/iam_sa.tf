@@ -61,3 +61,11 @@ resource "google_project_iam_member" "node_sa_permissions" {
   role     = each.key
   member   = "serviceAccount:${google_service_account.gke_node_sa.email}"
 }
+
+# Grant Secret Manager Accessor to the node pool SA
+resource "google_project_iam_member" "node_sa_secretmanager_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.gke_node_sa.email}"
+}
+
