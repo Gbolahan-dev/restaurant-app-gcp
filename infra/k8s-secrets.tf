@@ -4,6 +4,7 @@
 # 1. Look up the Neon DB URL from the secure Secret Manager
 data "google_secret_manager_secret_version" "db_url" {
   secret  = "restaurant-db-url" # The name of the secret you created with gcloud
+  project = "158322366388"
 }
 
 # 2. Create a Kubernetes secret in the staging namespace
