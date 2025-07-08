@@ -97,11 +97,13 @@ steps:
     - -c
     - |
       if [[ "$_TARGET_ENV" == "prod" ]]; then
+        export TF_VAR_database_url=$$(gcloud secrets versions access latest --secret=restaurant-db-url --project=${PROJECT_ID})
         echo "▶️  Terraform: helm_release.staging (${SHORT_SHA})"
         terraform init
         terraform apply -auto-approve \
           -var="image_tag=${SHORT_SHA}" \
           -target=helm_release.staging
+
       else
         echo "Skipping staging deploy – _TARGET_ENV=${_TARGET_ENV}"
       fi
@@ -130,6 +132,7 @@ steps:
     - -c
     - |
       if [[ "$_TARGET_ENV" == "prod" ]]; then
+        export TF_VAR_database_url=$$(gcloud secrets versions access latest --secret=restaurant-db-url --project=${PROJECT_ID})
         echo "▶️  Terraform: helm_release.production (${SHORT_SHA})"
         terraform init
         terraform apply -auto-approve \

@@ -1,20 +1,17 @@
-
-# infra/k8s-secrets.tf
-
-# 1. Look up the Neon DB URL from the secure Secret Manager
-data "google_secret_manager_secret_version" "db_url" {
-  secret  = "restaurant-db-url" # The name of the secret you created with gcloud
-  project = "158322366388"
+variable "database_url" {
+  description = "The database connection string from Secret Manager."
+  type        = string
+  sensitive   = true
 }
 
 # 2. Create a Kubernetes secret in the staging namespace
 resource "kubernetes_secret" "db_secret_staging" {
   metadata {
-    name      = "restaurant-db-secret" # We'll use the same secret name in both namespaces
+    name      = "restaurant-db-secret"
     namespace = kubernetes_namespace.staging.metadata[0].name
   }
   data = {
-    DATABASE_URL = data.google_secret_manager_secret_version.db_url.secret_data
+    DATABASE_URL = var.database_url
   }
   depends_on = [kubernetes_namespace.staging]
 }
@@ -26,8 +23,7 @@ resource "kubernetes_secret" "db_secret_prod" {
     namespace = kubernetes_namespace.prod.metadata[0].name
   }
   data = {
-    DATABASE_URL = data.google_secret_manager_secret_version.db_url.secret_data
+    DATABASE_URL = var.database_url
   }
   depends_on = [kubernetes_namespace.prod]
 }
-
