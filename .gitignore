@@ -1,10 +1,29 @@
+# 1) Node.js
+node_modules/
+dist/                   # compiled output
+logs/                   # log folder if you ever create one
+*.log                  # any log files
 
-# Ignore SDK downloads
-google-cloud-sdk*
-*.tar.gz
+# 2) Build / generated artifacts
+generated/              # Prisma client, codegen, etc.
+.dockerignore
+cloudbuild.pr.yaml     # optional: only if you aren’t checking it in
+
+# 3) Local env files
+.env
+.env.*.local
+
+# 4) Terraform state + crash logs
 infra/.terraform/
 infra/*.tfstate
 infra/*.tfstate.*
-infra/crash.log
 infra/*.tfplan
-node_modules/
+infra/crash.log
+
+# 5) SDK downloads / archives
+google-cloud-sdk*/
+*.tar.gz
+
+# 6) Misc
+*.pem
+
